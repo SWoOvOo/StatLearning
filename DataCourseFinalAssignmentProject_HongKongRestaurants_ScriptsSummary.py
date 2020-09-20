@@ -341,6 +341,8 @@ from scipy.spatial import distance
 from sklearn.cluster import DBSCAN
 from scipy.spatial.distance import cdist #point pair distance computation
 from sklearn.cluster import KMeans
+#For cluster comparison
+from scipy.stats import mannwhitneyu
 #For correlation
 from scipy.stats import spearmanr
 from scipy.stats import pearsonr
@@ -628,6 +630,52 @@ for i in range(0,len(df_res['group_c1cd'].unique())):
         
 res_map.save("C:/Users/User1/Desktop/projects/StatLearning/IBM_DS_FinalProject/Report/Visulization_selected/Maps/map_c1_counts.html")
 webbrowser.open_new_tab("C:/Users/User1/Desktop/projects/StatLearning/IBM_DS_FinalProject/Report/Visulization_selected/Maps/map_c1_counts.html")
+
+#%%
+#Statistics of the number of likes of the clusters
+list_c1_likes_stats = []
+for cl in df_c1_D_grouped.index:
+   cluster =  np.array(df_c1_class[df_c1_class['D_class']==cl]['likes'])
+   mean = sum(cluster)/len(cluster)
+   sd = np.std(cluster)
+   mini = min(cluster)
+   maxi = max(cluster)
+   list_c1_likes_stats.append([cl,mean,sd,mini,maxi])
+df_c1_likes_stats = pd.DataFrame(list_c1_likes_stats,columns=['cluster','mean','StDev','Min','Max'])
+df_c1_likes_stats.to_csv('C:/Users/User1/Desktop/projects/StatLearning/IBM_DS_FinalProject/Report/c1_counts_D_cluster_likes_stats.csv',encoding='utf-8-sig')
+
+#%%
+#Compare the number of likes of c1 category clusters
+df_c1_D_comp = pd.DataFrame(index = df_c1_D_grouped.index, columns = df_c1_D_grouped.index)
+df_rank1 = pd.DataFrame(index = df_c1_D_grouped.index, columns = df_c1_D_grouped.index)
+df_rank2 = pd.DataFrame(index = df_c1_D_grouped.index, columns = df_c1_D_grouped.index)
+df_compRes = pd.DataFrame(index = df_c1_D_grouped.index, columns = df_c1_D_grouped.index)
+for cl1 in df_c1_D_grouped.index:
+    for cl2 in df_c1_D_grouped.index:
+        cluster1 = df_c1_class[df_c1_class['D_class']==cl1]
+        cluster2 = df_c1_class[df_c1_class['D_class']==cl2]
+        cluster_c = cluster1.append(cluster2)
+        cluster_c = cluster_c.sort_values(by = 'likes')
+        cluster_c = cluster_c.reset_index(drop=True)
+        cluster_c = cluster_c.reset_index()
+        rank1 = cluster_c[cluster_c['D_class']==cl1]['index'].mean()
+        rank2 = cluster_c[cluster_c['D_class']==cl2]['index'].mean()
+        stat, p = mannwhitneyu(cluster1['likes'], cluster2['likes'])
+        #save results
+        df_c1_D_comp.loc[cl1,cl2] = p
+        df_rank1.loc[cl1,cl2] = rank1
+        df_rank2.loc[cl1,cl2] = rank2
+        if rank1 > rank2 and p <0.05:
+            df_compRes.loc[cl1,cl2] = 'cluster_row more likes'
+        elif rank1 < rank2 and p <0.05:
+            df_compRes.loc[cl1,cl2] = 'cluster_row less likes'
+        else:
+            df_compRes.loc[cl1,cl2] = 'no significant difference'
+#%%
+df_compRes.to_csv('C:/Users/User1/Desktop/projects/StatLearning/IBM_DS_FinalProject/Report/c1_counts_D_cluster_likes_compareResult.csv',encoding='utf-8-sig')
+df_c1_D_comp.to_csv('C:/Users/User1/Desktop/projects/StatLearning/IBM_DS_FinalProject/Report/c1_counts_D_cluster_likes_compareP.csv',encoding='utf-8-sig')
+
+
 
 #%%
 #Distribution of the c1 categories
